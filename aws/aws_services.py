@@ -1,8 +1,10 @@
 import boto3
+import pyarrow as pa
+import pyarrow.parquet as pq
 from botocore.exceptions import NoCredentialsError
 
 
-def handle_s3(file_name, bucket, access_key, secret_key, aws_session_token, action, object_name=None, prefix=None):
+def handle_s3(dataframe, bucket, access_key, secret_key, aws_session_token, action, object_name=None, prefix=None):
 
     session = boto3.Session(
         aws_access_key_id=access_key,
@@ -14,16 +16,32 @@ def handle_s3(file_name, bucket, access_key, secret_key, aws_session_token, acti
     try:
 
         if action == 'upload':
+            import io
+            parquet_buffer = io.BytesIO()
+            # Converter o DataFrame para Parquet
+            pq.write_table(pa.Table.from_pandas(dataframe), parquet_buffer)
+            parquet_buffer.seek(0)
 
-            if object_name is None:
+            # parquet_buffer = pq.write_table(pa.Table.from_pandas(dataframe)).to_buffer()
 
-                object_name = file_name.split('/')[-1]
-
-            if prefix:
-
-                object_name = f"{prefix}/{object_name}"
-
-            s3_client.upload_file(file_name, bucket, object_name)
+            # upload to s3
+            # s3 = boto3.client("s3")
+            # s3.up
+            s3_client.upload_fileobj(
+                Fileobj=parquet_buffer,
+                Bucket=bucket,
+                Key=prefix
+            )
+        #
+        #     if object_name is None:
+        #
+        #         object_name = file_name.split('/')[-1]
+        #
+        #     if prefix:
+        #
+        #         object_name = f"{prefix}/{object_name}"
+        #
+        #     s3_client.upload_file(file_name, bucket, object_name)
 
         elif action == 'delete':
 
