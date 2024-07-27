@@ -1,4 +1,5 @@
 import boto3
+import io
 import pyarrow as pa
 import pyarrow.parquet as pq
 from botocore.exceptions import NoCredentialsError
@@ -16,7 +17,7 @@ def handle_s3(dataframe, bucket, access_key, secret_key, aws_session_token, acti
     try:
 
         if action == 'upload':
-            import io
+
             parquet_buffer = io.BytesIO()
             # Converter o DataFrame para Parquet
             pq.write_table(pa.Table.from_pandas(dataframe), parquet_buffer)

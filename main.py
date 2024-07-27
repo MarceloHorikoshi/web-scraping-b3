@@ -20,11 +20,18 @@ load_dotenv()
 
 url = 'https://sistemaswebb3-listados.b3.com.br/indexPage/day/IBOV?language=pt-br'
 try:
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    try:
 
-    driver.get(url)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-    time.sleep(1)
+    except Exception as e:
+        print(e)
+
+        driver = webdriver.Chrome()
+
+    finally:
+        driver.get(url)
+        time.sleep(1)
 
     # Encontre o elemento <select> pelo seu ID
     select_element = driver.find_element(By.ID, "segment")
@@ -60,6 +67,19 @@ try:
     # Analisar o HTML com BeautifulSoup
     soup = BeautifulSoup(html_table, 'html.parser')
 
+    form_elements = driver.find_elements(By.TAG_NAME, 'form')
+    if form_elements:
+        form_element = form_elements[0]
+        h2_tag = form_element.find_element(By.TAG_NAME, 'h2')
+    else:
+        print("Form não encontrado na página!")
+
+    # Extrair o texto da tag <h2>
+    h2_text = h2_tag.text
+
+    # Dividir o texto para extrair a data
+    data_pregao = h2_text.split(' - ')[1]
+
     # Extrair os nomes das colunas
     column_names = [th.text.strip() for th in soup.find_all('th')]
 
@@ -86,7 +106,7 @@ df = pd.DataFrame(data, columns=column_names)
 df.columns = ['setor', 'codigo', 'acao', 'tipo', 'qtd_teorica', 'part', 'part_acum']
 
 data_atual = datetime.today().strftime('%Y-%m-%d')
-df['data'] = data_atual
+df['data_inclusao'] = data_atual
 
 df = df.iloc[2:]
 
@@ -103,8 +123,37 @@ df['part'] = df['part'].astype(float)
 df['part_acum'] = df['part_acum'].str.replace(',', '.')
 df['part_acum'] = df['part_acum'].astype(float)
 
-nome_arquivo = f'carteira-do-dia.parquet'
-caminho_arquivo_no_s3 = ''
+data_pregao_nome = data_pregao.replace('/', '-')
+
+# Obter o ano com 2 dígitos
+ano_2_digitos = int(data_pregao_nome.split('-')[2])
+
+# Calcular o ano com 4 dígitos
+if ano_2_digitos < 50:
+  ano_4_digitos = 2000 + ano_2_digitos
+else:
+  ano_4_digitos = 1900 + ano_2_digitos
+
+# Criar a string de data com 4 dígitos para o ano
+data_str_com_4_digitos = f'{data_pregao_nome.split("-")[0]}-{data_pregao_nome.split("-")[1]}-{ano_4_digitos}'
+
+# Converter para objeto datetime
+data_obj = datetime.strptime(data_str_com_4_digitos, '%d-%m-%Y')
+
+# Formatar a data como 'AAAA-MM-DD'
+data_formatada = data_obj.strftime('%Y-%m-%d')
+
+
+df['data_pregao'] = data_formatada
+
+df.columns = [
+    'setor', 'código', 'ação', 'tipo',
+    'qtde. teórica', 'part. (%)', 'part. (%)acum.',
+    'data_pregao', 'data_inclusao'
+]
+
+nome_arquivo = f'b3_dados_{data_formatada}.parquet'
+caminho_arquivo_no_s3 = 'dados_b3'
 
 # df.to_csv(arquivo, sep=';', index=False)
 
@@ -158,5 +207,5 @@ handle_s3(
     aws_session_token=os.getenv('aws_session_token'),
     action='upload',
     object_name=nome_arquivo,
-    prefix=caminho_arquivo_no_s3 + nome_arquivo
+    prefix=caminho_arquivo_no_s3 + "/" + nome_arquivo
 )
