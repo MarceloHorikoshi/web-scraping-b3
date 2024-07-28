@@ -148,7 +148,7 @@ df['data_pregao'] = data_formatada
 
 df.columns = [
     'setor', 'código', 'ação', 'tipo',
-    'qtde. teórica', 'part. (%)', 'part. (%)acum.',
+    'qtd', 'part. (%)', 'part. (%)acum.',
     'data_pregao', 'data_inclusao'
 ]
 
