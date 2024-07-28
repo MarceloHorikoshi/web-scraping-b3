@@ -105,9 +105,6 @@ df = pd.DataFrame(data, columns=column_names)
 
 df.columns = ['setor', 'codigo', 'acao', 'tipo', 'qtd_teorica', 'part', 'part_acum']
 
-data_atual = datetime.today().strftime('%Y-%m-%d')
-df['data_inclusao'] = data_atual
-
 df = df.iloc[2:]
 
 df = df.iloc[:-2]
@@ -145,12 +142,16 @@ data_formatada = data_obj.strftime('%Y-%m-%d')
 
 
 df['data_pregao'] = data_formatada
+data_atual = datetime.today().strftime('%Y-%m-%d')
+df['data_inclusao'] = data_atual
 
 df.columns = [
     'setor', 'código', 'ação', 'tipo',
     'qtd', 'part. (%)', 'part. (%)acum.',
     'data_pregao', 'data_inclusao'
 ]
+
+df.to_clipboard()
 
 nome_arquivo = f'b3_dados_{data_formatada}.parquet'
 caminho_arquivo_no_s3 = 'dados_b3'
